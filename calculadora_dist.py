@@ -1,6 +1,7 @@
-from xmlrpc.server import SimpleXMLRPCServer
+import Pyro5.api
 import math
 
+@Pyro5.api.expose
 class Calculadora:
     def soma(self, a, b):
         return a + b
@@ -25,20 +26,22 @@ class Calculadora:
         return base ** expoente
 
 def main():
-    server = SimpleXMLRPCServer(("localhost", 8000))
-    print("Servidor da calculadora ouvindo na porta 8000...")
-    
     calculadora = Calculadora()
-    server.register_instance(calculadora)
     
-    server.register_function(calculadora.soma, 'soma')
-    server.register_function(calculadora.subtracao, 'subtracao')
-    server.register_function(calculadora.multiplicacao, 'multiplicacao')
-    server.register_function(calculadora.divisao, 'divisao')
-    server.register_function(calculadora.raiz_quadrada, 'raiz_quadrada')
-    server.register_function(calculadora.exponenciacao, 'exponenciacao')
+    daemon = Pyro5.api.Daemon()
+
+    try:
+        ns = Pyro5.api.locate_ns()
+    except Pyro5.errors.NamingError:
+        print("Erro: Não foi possível localizar o nameserver.")
+        return
+
     
-    server.serve_forever()
+    uri = daemon.register(calculadora)
+    ns.register("calculadora.distribuida", uri)
+
+    print("Servidor da calculadora ouvindo...")
+    daemon.requestLoop()
 
 if __name__ == "__main__":
     main()
